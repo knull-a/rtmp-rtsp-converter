@@ -1,0 +1,23 @@
+version: '3'
+
+services:
+  rtmp-rtsp-converter:
+    build: .
+    container_name: rtmp-rtsp-converter
+    ports:
+      # Web interface
+      - "3000:3000"
+      # RTMP input
+      - "1935:1935"
+      # RTSP output
+      - "8554:8554"
+    environment:
+      - RTMP_PORT=1935
+      - RTSP_PORT=8554
+      - WEB_PORT=3000
+      - LOG_LEVEL=info
+      - RTSP_BASE_URL=rtsp://localhost:8554
+    volumes:
+      # Mount logs directory for persistence
+      - ./logs:/app/logs
+    restart: unless-stopped
