@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RTMP to RTSP Converter</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1><i class="fas fa-exchange-alt"></i> RTMP to RTSP Converter</h1>
+            <p>Convert your RTMP streams to RTSP format</p>
+        </header>
+
+        <section class="add-stream-section">
+            <h2>Add New Stream</h2>
+            <form id="add-stream-form">
+                <div class="form-group">
+                    <label for="rtmp-url">RTMP URL:</label>
+                    <input type="text" id="rtmp-url" name="rtmp-url" placeholder="rtmp://example.com/live/stream" required>
+                </div>
+                <div class="form-group">
+                    <label for="stream-name">Stream Name (optional):</label>
+                    <input type="text" id="stream-name" name="stream-name" placeholder="my-stream">
+                </div>
+                <button type="submit" class="btn primary">Add Stream</button>
+            </form>
+        </section>
+
+        <section class="active-streams-section">
+            <h2>Active Streams</h2>
+            <div class="stream-list" id="stream-list">
+                <div class="loading">Loading streams...</div>
+            </div>
+        </section>
+
+        <section class="help-section">
+            <h2>How to View RTSP Streams</h2>
+            <div class="help-content">
+                <h3>Using VLC Player:</h3>
+                <ol>
+                    <li>Open VLC Player</li>
+                    <li>Go to Media > Open Network Stream</li>
+                    <li>Enter the RTSP URL (e.g., rtsp://localhost:8554/stream1)</li>
+                    <li>Click Play</li>
+                </ol>
+
+                <h3>Using FFplay:</h3>
+                <pre>ffplay rtsp://localhost:8554/stream1</pre>
+            </div>
+        </section>
+    </div>
+
+    <template id="stream-item-template">
+        <div class="stream-item">
+            <div class="stream-header">
+                <h3 class="stream-id"></h3>
+                <span class="stream-status"></span>
+            </div>
+            <div class="stream-details">
+                <div class="detail-item">
+                    <span class="label">RTMP Source:</span>
+                    <span class="rtmp-url"></span>
+                </div>
+                <div class="detail-item">
+                    <span class="label">RTSP URL:</span>
+                    <div class="rtsp-container">
+                        <span class="rtsp-url"></span>
+                        <button class="copy-btn" title="Copy to clipboard"><i class="fas fa-copy"></i></button>
+                    </div>
+                </div>
+                <div class="detail-item">
+                    <span class="label">Uptime:</span>
+                    <span class="uptime"></span>
+                </div>
+            </div>
+            <div class="stream-actions">
+                <button class="btn view-btn"><i class="fas fa-play"></i> View</button>
+                <button class="btn delete-btn"><i class="fas fa-trash"></i> Stop</button>
+            </div>
+        </div>
+    </template>
+
+    <script src="app.js"></script>
+</body>
+</html>
