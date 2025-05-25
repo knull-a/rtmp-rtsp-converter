@@ -4,7 +4,6 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger');
 const config = require('./config');
-const Stream = require('node-rtsp-stream');
 
 if (!fs.existsSync(config.tempDir)) {
   fs.mkdirSync(config.tempDir, { recursive: true });
@@ -12,7 +11,7 @@ if (!fs.existsSync(config.tempDir)) {
 
 class StreamManager {
   constructor() {
-    this.streams = new Map(); 
+    this.streams = new Map();
   }
 
   /**
@@ -34,20 +33,20 @@ class StreamManager {
       throw new Error(`Stream with ID ${id} already exists`);
     }
 
-    // Define the RTSP output URL
-    const rtspUrl = `${config.rtspBaseUrl}/${id}`;
-    
-    logger.info(`Starting conversion from ${rtmpUrl} to ${rtspUrl}`);
+    logger.info(`Starting conversion from ${rtmpUrl} to ${config.rtspBaseUrl}/${id}`);
 
     try {
       // Start FFmpeg process to convert RTMP to RTSP
       const ffmpegProcess = this._startFFmpegProcess(rtmpUrl, id);
       
+      // Use displayUrl for the UI (with localhost instead of rtsp-server)
+      const displayUrl = `rtsp://localhost:8554/${id}`;
+      
       // Store stream information
       const streamInfo = {
         id,
         rtmpUrl,
-        rtspUrl,
+        rtspUrl: displayUrl, // Use the displayUrl for the UI
         process: ffmpegProcess,
         status: 'active',
         startTime: new Date(),
@@ -142,10 +141,6 @@ class StreamManager {
    * @returns {ChildProcess} The FFmpeg process
    */
   _startFFmpegProcess(rtmpUrl, id) {
-    // Instead of trying to output directly to RTSP (which requires an RTSP server),
-    // we'll use FFmpeg to convert the RTMP stream to HLS (HTTP Live Streaming)
-    // which can be easily served over HTTP
-    
     // Make sure we're using the correct RTMP URL format
     if (!rtmpUrl.startsWith('rtmp://')) {
       logger.warn(`RTMP URL doesn't start with rtmp:// - attempting to fix: ${rtmpUrl}`);
@@ -165,14 +160,15 @@ class StreamManager {
       fs.mkdirSync(streamDir, { recursive: true });
     }
     
-    // Define output file paths
-    const hlsPath = path.join(streamDir, 'stream.m3u8');
+    // Define the RTSP output URL
+    // Use rtsp-server for internal communication but display localhost for external access
+    const rtspUrl = `rtsp://rtsp-server:8554/${id}`;
+    // This is the URL that will be displayed to users
+    const displayUrl = `rtsp://localhost:8554/${id}`;
     
-    // For the RTSP URL, we'll actually be using HTTP with the HLS stream
-    // But we'll keep the RTSP URL format for compatibility with the rest of the code
-    const rtspUrl = `${config.rtspBaseUrl}/${id}`;
+    logger.info(`Starting conversion from ${rtmpUrl} to ${rtspUrl}`);
     
-    // Build FFmpeg arguments for HLS output
+    // Build FFmpeg arguments for RTSP output
     const ffmpegArgs = [
       // Input options
       '-re',                  // Read input at native frame rate
@@ -181,13 +177,9 @@ class StreamManager {
       // Output options
       '-c:v', 'copy',         // Copy video codec (no re-encoding)
       '-c:a', 'copy',         // Copy audio codec (no re-encoding)
-      '-f', 'hls',            // HLS output format
-      '-hls_time', '2',       // Segment length in seconds
-      '-hls_list_size', '5',  // Number of segments to keep in the playlist
-      '-hls_flags', 'delete_segments', // Delete old segments
-      '-hls_segment_type', 'mpegts', // Use MPEG-TS segments
-      '-method', 'PUT',       // Use PUT method for HTTP
-      hlsPath                 // Output HLS path
+      '-f', 'rtsp',           // RTSP output format
+      '-rtsp_transport', 'tcp', // Use TCP for RTSP transport
+      rtspUrl                 // Output RTSP URL
     ];
     
     logger.info(`FFmpeg command: ffmpeg ${ffmpegArgs.join(' ')}`);

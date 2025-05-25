@@ -1,0 +1,19 @@
+FROM alpine:3.18
+
+# Install required packages
+RUN apk add --no-cache wget
+
+# Install MediaMTX (formerly RTSP Simple Server)
+RUN wget https://github.com/bluenviron/mediamtx/releases/download/v1.0.0/mediamtx_v1.0.0_linux_amd64.tar.gz && \
+    tar -xzf mediamtx_v1.0.0_linux_amd64.tar.gz && \
+    mv mediamtx /usr/local/bin/ && \
+    rm mediamtx_v1.0.0_linux_amd64.tar.gz
+
+# Create configuration file
+COPY rtsp-simple-server.yml /mediamtx.yml
+
+# Expose RTSP port
+EXPOSE 8554
+
+# Run MediaMTX
+CMD ["/usr/local/bin/mediamtx", "/mediamtx.yml"]

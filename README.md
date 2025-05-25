@@ -1,27 +1,28 @@
 # RTMP to RTSP Converter
 
-A service that converts RTMP video streams to RTSP/HLS format for compatibility between different systems.
+A service that converts RTMP video streams to RTSP format for compatibility between different systems.
 
 ## Overview
 
-This project provides a solution for converting RTMP video streams to a format compatible with RTSP clients. It uses HTTP Live Streaming (HLS) as an intermediate format, which provides better compatibility with browsers and media players.
+This project provides a solution for converting RTMP video streams to RTSP format. It creates a dedicated RTSP server for each stream, allowing RTSP clients to connect and view the converted streams.
 
 ## Features
 
-- Convert RTMP streams to HLS format (compatible with RTSP clients)
+- Convert RTMP streams to true RTSP format
 - Support for multiple simultaneous streams
 - User-friendly web interface for managing streams
 - Error logging and status reporting
-- Easy stream preview via web browsers or media players
+- Easy stream preview via RTSP-compatible players
 - Docker Compose setup for simple deployment
 
 ## Architecture
 
-The project consists of three main components:
+The project consists of four main components:
 
 1. **RTMP Server**: Receives RTMP streams from sources (e.g., OBS, drones, cameras)
-2. **Converter**: Converts RTMP streams to HLS format and serves them via HTTP
-3. **Test Stream Generator** (optional): Generates a test pattern for demonstration purposes
+2. **RTSP Server**: Dedicated server for handling RTSP protocol and serving RTSP streams
+3. **Converter**: Converts RTMP streams to RTSP format using FFmpeg
+4. **Test Stream Generator** (optional): Generates a test pattern for demonstration purposes
 
 ## Quick Start with Docker
 
@@ -47,8 +48,8 @@ This will start:
 2. You'll see the test stream already running. If not, add a new stream with the URL `rtmp://rtmp-server:1935/live/stream`
 3. Once added, you'll see the stream in the list with its status and a unique ID
 4. To view the stream:
-   - Click the "View" button in the web interface
-   - Or open the URL in a media player: `http://localhost:3000/streams/[stream-id]/stream.m3u8`
+   - Use VLC Player with the URL `rtsp://localhost:8554/[stream-id]`
+   - Or use FFplay: `ffplay rtsp://localhost:8554/[stream-id]`
 
 ## Adding Your Own RTMP Streams
 
@@ -60,11 +61,16 @@ You can add any RTMP stream through the web interface:
 
 ## Viewing Streams
 
-Streams can be viewed in several ways:
+Streams can be viewed using RTSP-compatible players:
 
-1. **Web Browser**: Modern browsers can play HLS streams directly
-2. **VLC Player**: Open the network stream with the URL `http://localhost:3000/streams/[stream-id]/stream.m3u8`
-3. **FFplay**: `ffplay http://localhost:3000/streams/[stream-id]/stream.m3u8`
+1. **VLC Player**: Open the network stream with the URL `rtsp://localhost:8554/[stream-id]`
+2. **FFplay**: `ffplay -rtsp_transport tcp rtsp://localhost:8554/[stream-id]`
+3. **Other RTSP clients**: Any RTSP-compatible client can connect to the stream
+
+Note: For better performance with FFplay, you can use these options:
+```bash
+ffplay -rtsp_transport tcp -fflags nobuffer -flags low_delay -framedrop rtsp://localhost:8554/[stream-id]
+```
 
 ## API Endpoints
 

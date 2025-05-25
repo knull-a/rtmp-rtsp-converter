@@ -1,0 +1,9 @@
+# RTSP Simple Server configuration
+
+# Address of the TCP/RTSP listener
+rtspAddress: :8554
+
+# Path configuration
+paths:
+  all: {}
+

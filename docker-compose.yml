@@ -9,7 +9,18 @@ services:
     container_name: rtmp-server
     ports:
       - "1935:1935"  # RTMP port
-      - "8000:8000"  # HTTP port for RTMP server stats
+    restart: unless-stopped
+    networks:
+      - stream-network
+
+  # RTSP server for serving RTSP streams
+  rtsp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.rtsp
+    container_name: rtsp-server
+    ports:
+      - "8554:8554"  # RTSP port
     restart: unless-stopped
     networks:
       - stream-network
@@ -27,12 +38,13 @@ services:
       - RTSP_PORT=8554
       - WEB_PORT=3000
       - LOG_LEVEL=info
-      - RTSP_BASE_URL=rtsp://converter:8554
+      - RTSP_BASE_URL=rtsp://rtsp-server:8554
       - RTMP_SERVER=rtmp://rtmp-server:1935
     volumes:
       - converter-data:/app/temp
     depends_on:
       - rtmp-server
+      - rtsp-server
     restart: unless-stopped
     networks:
       - stream-network

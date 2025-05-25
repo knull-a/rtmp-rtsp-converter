@@ -22,8 +22,6 @@ RUN mkdir -p temp
 # Expose ports
 # Web interface
 EXPOSE 3000
-# HLS output
-EXPOSE 8554
 
 # Start the application
 CMD ["npm", "start"]
