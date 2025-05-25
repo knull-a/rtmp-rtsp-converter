@@ -5,10 +5,7 @@ module.exports = {
   rtspPort: process.env.RTSP_PORT || 8554,
   webPort: process.env.WEB_PORT || 3000,
   logLevel: process.env.LOG_LEVEL || 'info',
-  // Default RTMP URL to use for testing
   defaultRtmpUrl: process.env.DEFAULT_RTMP_URL || 'rtmp://localhost:1935/live/stream',
-  // Base URL for RTSP output
   rtspBaseUrl: process.env.RTSP_BASE_URL || 'rtsp://localhost:8554',
-  // Temporary directory for stream processing
   tempDir: process.env.TEMP_DIR || './temp'
 };

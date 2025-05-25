@@ -15,6 +15,13 @@ app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static(path.join(__dirname, '../public')));
 
+app.use('/streams', express.static(path.join(__dirname, '../temp')));
+app.use('/streams', (req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Methods', 'GET');
+  next();
+});
+
 const apiRouter = express.Router();
 
 apiRouter.get('/streams', (req, res) => {

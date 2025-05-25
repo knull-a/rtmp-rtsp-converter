@@ -13,7 +13,8 @@ COPY package*.json ./
 RUN npm install
 
 # Copy app source
-COPY . .
+COPY src ./src
+COPY public ./public
 
 # Create temp directory for stream processing
 RUN mkdir -p temp
@@ -21,9 +22,7 @@ RUN mkdir -p temp
 # Expose ports
 # Web interface
 EXPOSE 3000
-# RTMP input
-EXPOSE 1935
-# RTSP output
+# HLS output
 EXPOSE 8554
 
 # Start the application

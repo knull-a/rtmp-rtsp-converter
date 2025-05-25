@@ -1,0 +1,20 @@
+FROM node:16-alpine
+
+# Create app directory
+WORKDIR /app
+
+# Copy package.json and rtmp-server.js
+COPY package.json ./
+COPY rtmp-server.js ./
+
+# Install dependencies
+RUN npm install
+
+# Expose ports
+# RTMP
+EXPOSE 1935
+# HTTP for stats
+EXPOSE 8000
+
+# Start the RTMP server
+CMD ["node", "rtmp-server.js"]

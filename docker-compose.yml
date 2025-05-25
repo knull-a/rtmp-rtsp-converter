@@ -1,23 +1,57 @@
 version: '3'
 
 services:
-  rtmp-rtsp-converter:
-    build: .
+  # RTMP server for receiving RTMP streams
+  rtmp-server:
+    build:
+      context: .
+      dockerfile: Dockerfile.rtmp
+    container_name: rtmp-server
+    ports:
+      - "1935:1935"  # RTMP port
+      - "8000:8000"  # HTTP port for RTMP server stats
+    restart: unless-stopped
+    networks:
+      - stream-network
+
+  # RTMP to RTSP converter service
+  converter:
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: rtmp-rtsp-converter
     ports:
-      # Web interface
-      - "3000:3000"
-      # RTMP input
-      - "1935:1935"
-      # RTSP output
-      - "8554:8554"
+      - "3000:3000"  # Web interface
     environment:
       - RTMP_PORT=1935
       - RTSP_PORT=8554
       - WEB_PORT=3000
       - LOG_LEVEL=info
-      - RTSP_BASE_URL=rtsp://localhost:8554
+      - RTSP_BASE_URL=rtsp://converter:8554
+      - RTMP_SERVER=rtmp://rtmp-server:1935
     volumes:
-      # Mount logs directory for persistence
-      - ./logs:/app/logs
+      - converter-data:/app/temp
+    depends_on:
+      - rtmp-server
     restart: unless-stopped
+    networks:
+      - stream-network
+
+  # Test stream generator (optional, for demo purposes)
+  test-stream:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    container_name: test-stream
+    depends_on:
+      - rtmp-server
+    restart: unless-stopped
+    networks:
+      - stream-network
+
+networks:
+  stream-network:
+    driver: bridge
+
+volumes:
+  converter-data:

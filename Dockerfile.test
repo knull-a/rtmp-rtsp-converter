@@ -1,0 +1,16 @@
+FROM alpine:3.14
+
+# Install FFmpeg with all required dependencies for drawtext filter
+RUN apk add --no-cache ffmpeg ffmpeg-libs fontconfig ttf-dejavu
+
+# Set working directory
+WORKDIR /app
+
+# Copy the generate-stream script
+COPY generate-stream.sh /app/
+
+# Ensure the script is executable
+RUN chmod +x /app/generate-stream.sh
+
+# Run the script
+CMD ["/app/generate-stream.sh"]

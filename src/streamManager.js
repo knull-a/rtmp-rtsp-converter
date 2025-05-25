@@ -4,15 +4,15 @@ const fs = require('fs');
 const path = require('path');
 const logger = require('./logger');
 const config = require('./config');
+const Stream = require('node-rtsp-stream');
 
-// Ensure temp directory exists
 if (!fs.existsSync(config.tempDir)) {
   fs.mkdirSync(config.tempDir, { recursive: true });
 }
 
 class StreamManager {
   constructor() {
-    this.streams = new Map(); // Map to store active streams
+    this.streams = new Map(); 
   }
 
   /**
@@ -142,58 +142,90 @@ class StreamManager {
    * @returns {ChildProcess} The FFmpeg process
    */
   _startFFmpegProcess(rtmpUrl, id) {
-    // FFmpeg command to convert RTMP to RTSP
-    // -re: Read input at native frame rate (important for streaming)
-    // -i: Input URL
-    // -c: Copy codec without re-encoding (faster, less CPU intensive)
-    // -f: Force output format to RTSP
-    // -rtsp_transport: Use TCP for RTSP transport (more reliable)
+    // Instead of trying to output directly to RTSP (which requires an RTSP server),
+    // we'll use FFmpeg to convert the RTMP stream to HLS (HTTP Live Streaming)
+    // which can be easily served over HTTP
+    
+    // Make sure we're using the correct RTMP URL format
+    if (!rtmpUrl.startsWith('rtmp://')) {
+      logger.warn(`RTMP URL doesn't start with rtmp:// - attempting to fix: ${rtmpUrl}`);
+      if (rtmpUrl.includes('://')) {
+        // Replace any other protocol with rtmp://
+        rtmpUrl = 'rtmp://' + rtmpUrl.split('://')[1];
+      } else {
+        // Add rtmp:// prefix if no protocol is specified
+        rtmpUrl = 'rtmp://' + rtmpUrl;
+      }
+      logger.info(`Corrected RTMP URL: ${rtmpUrl}`);
+    }
+    
+    // Create output directory for this stream
+    const streamDir = path.join(config.tempDir, id);
+    if (!fs.existsSync(streamDir)) {
+      fs.mkdirSync(streamDir, { recursive: true });
+    }
+    
+    // Define output file paths
+    const hlsPath = path.join(streamDir, 'stream.m3u8');
+    
+    // For the RTSP URL, we'll actually be using HTTP with the HLS stream
+    // But we'll keep the RTSP URL format for compatibility with the rest of the code
+    const rtspUrl = `${config.rtspBaseUrl}/${id}`;
+    
+    // Build FFmpeg arguments for HLS output
     const ffmpegArgs = [
-      '-re',
-      '-i', rtmpUrl,
-      '-c', 'copy',
-      '-f', 'rtsp',
-      '-rtsp_transport', 'tcp',
-      `${config.rtspBaseUrl}/${id}`
+      // Input options
+      '-re',                  // Read input at native frame rate
+      '-i', rtmpUrl,          // Input RTMP URL
+      
+      // Output options
+      '-c:v', 'copy',         // Copy video codec (no re-encoding)
+      '-c:a', 'copy',         // Copy audio codec (no re-encoding)
+      '-f', 'hls',            // HLS output format
+      '-hls_time', '2',       // Segment length in seconds
+      '-hls_list_size', '5',  // Number of segments to keep in the playlist
+      '-hls_flags', 'delete_segments', // Delete old segments
+      '-hls_segment_type', 'mpegts', // Use MPEG-TS segments
+      '-method', 'PUT',       // Use PUT method for HTTP
+      hlsPath                 // Output HLS path
     ];
     
-    logger.debug(`FFmpeg command: ffmpeg ${ffmpegArgs.join(' ')}`);
+    logger.info(`FFmpeg command: ffmpeg ${ffmpegArgs.join(' ')}`);
     
-    // Spawn FFmpeg process
     const process = spawn('ffmpeg', ffmpegArgs);
     
-    // Set up logging for FFmpeg output
     process.stdout.on('data', (data) => {
-      logger.debug(`FFmpeg [${id}] stdout: ${data.toString().trim()}`);
+      const message = data.toString().trim();
+      if (message) {
+        logger.debug(`FFmpeg [${id}] stdout: ${message}`);
+      }
     });
     
     process.stderr.on('data', (data) => {
       const message = data.toString().trim();
-      logger.debug(`FFmpeg [${id}] stderr: ${message}`);
-      
-      // Check for errors in FFmpeg output
-      if (message.includes('Error') || message.includes('error') || message.includes('failed')) {
-        if (this.streams.has(id)) {
-          const stream = this.streams.get(id);
-          stream.errors.push({
-            time: new Date(),
-            message
-          });
-          
-          // Update stream status if it looks like a connection error
-          if (message.includes('Connection refused') || message.includes('Failed to connect')) {
-            stream.status = 'connection_error';
-            logger.error(`Stream ${id} connection error: ${message}`);
+      if (message) {
+        logger.debug(`FFmpeg [${id}] stderr: ${message}`);
+        
+        if (message.includes('Error') || message.includes('error') || message.includes('failed')) {
+          if (this.streams.has(id)) {
+            const stream = this.streams.get(id);
+            stream.errors.push({
+              time: new Date(),
+              message
+            });
+            
+            if (message.includes('Connection refused') || message.includes('Failed to connect')) {
+              stream.status = 'connection_error';
+              logger.error(`Stream ${id} connection error: ${message}`);
+            }
           }
         }
       }
     });
     
-    // Handle process exit
     process.on('close', (code) => {
       logger.info(`FFmpeg process for stream ${id} exited with code ${code}`);
       
-      // Update stream status if it still exists in our map
       if (this.streams.has(id)) {
         const stream = this.streams.get(id);
         
@@ -213,5 +245,4 @@ class StreamManager {
   }
 }
 
-// Export a singleton instance
 module.exports = new StreamManager();
